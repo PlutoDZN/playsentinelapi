@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from collections import deque
 from datetime import datetime
 from typing import Dict
@@ -19,6 +20,16 @@ if not settings.api_key:
     raise RuntimeError("PLAY_SENTINEL_API_KEY must be set")
 
 app = FastAPI(title="PlaySentinel API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://plutodzn.github.io"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # CORS (für Demo UI etc.)
 app.add_middleware(
