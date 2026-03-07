@@ -65,22 +65,23 @@ def _rate_limit(request: Request, api_key: str = Depends(_check_api_key)):
         bucket.popleft()
 
     if len(bucket) >= RATE_LIMIT_PER_MIN:
-        raise HTTPException(status_code=429, detail="rate limit exceeded", headers={"Retry-After": "60"})
+        raise HTTPException(
+            status_code=429,
+            detail="rate limit exceeded",
+            headers={"Retry-After": "60"},
+        )
 
     bucket.append(now)
 
 
+# Protected router: requires API key + rate limit
 router = APIRouter(prefix="/v1", dependencies=[Depends(_rate_limit)])
 
-
-@router.get("/health", response_model=HealthResponse)
-def health():
-    store.cleanup()
-    return HealthResponse(status="ok", active_sessions=len(store.snapshot()))
+# Public demo router: no API key required
+demo_router = APIRouter(prefix="/v1")
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
-def analyze(req: AnalyzeRequest):
+def _run_analysis(req: AnalyzeRequest) -> AnalyzeResponse:
     score, conv_risk, cats, matched, stage, lang, reasons = detector.analyze(
         req.message, user_id=req.user_id, target_id=req.target_id
     )
@@ -105,6 +106,22 @@ def analyze(req: AnalyzeRequest):
         action_reasons=policy_result.get("action_reasons", []),
         policy_version=policy_result.get("policy_version", ""),
     )
+
+
+@demo_router.get("/health", response_model=HealthResponse)
+def health():
+    store.cleanup()
+    return HealthResponse(status="ok", active_sessions=len(store.snapshot()))
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+def analyze(req: AnalyzeRequest):
+    return _run_analysis(req)
+
+
+@demo_router.post("/demo/analyze", response_model=AnalyzeResponse)
+def demo_analyze(req: AnalyzeRequest):
+    return _run_analysis(req)
 
 
 @router.get("/sessions")
@@ -145,4 +162,5 @@ def session(user_id: str, target_id: str):
     }
 
 
+app.include_router(demo_router)
 app.include_router(router)
