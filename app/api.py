@@ -1,4 +1,3 @@
-from fastapi.middleware.cors import CORSMiddleware
 from collections import deque
 from datetime import datetime
 from typing import Dict
@@ -28,15 +27,6 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# CORS (für Demo UI etc.)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.origins_list(),
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
