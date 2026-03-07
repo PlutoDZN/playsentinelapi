@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  api:
+    build: .
+    environment:
+      - SAFEPLAY_API_KEY=PlaySentinelDevKey12102000
+      - SAFEPLAY_KEYWORDS=dynamic_keywords.json
+      - SAFEPLAY_LOG=incidents.jsonl
+      - SAFEPLAY_SESSIONS=sessions.json
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - sessions_data:/app/sessions.json
+      - logs_data:/app/incidents.jsonl
+
+volumes:
+  sessions_data:
+  logs_data:
