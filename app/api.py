@@ -71,25 +71,11 @@ def _rate_limit(request: Request, api_key: str = Depends(_check_api_key)):
     bucket.append(now)
 
 
-
-def _read_incidents(limit: int = 200) -> list[dict]:
-    path = Path(settings.incidents_log or "incidents.jsonl")
-    if not path.exists():
-        return []
-
-    rows = []
-    with path.open("r", encoding="utf-8") as file:
-        for line in file:
-            if not line.strip():
-                continue
-            try:
-                rows.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-
-    rows = rows[-limit:]
-    rows.reverse()
-    return rows
+def _cleanup_sessions() -> None:
+    try:
+        store.cleanup()
+    except Exception as exc:
+        print(f"[SESSION CLEANUP WARN] {exc}")
 
 
 router = APIRouter(prefix="/v1", dependencies=[Depends(_rate_limit)])
@@ -97,12 +83,13 @@ router = APIRouter(prefix="/v1", dependencies=[Depends(_rate_limit)])
 
 @router.get("/health", response_model=HealthResponse)
 def health():
-    store.cleanup()
+    _cleanup_sessions()
     return HealthResponse(status="ok", active_sessions=len(store.snapshot()))
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 def analyze(req: AnalyzeRequest):
+    _cleanup_sessions()
     score, conv_risk, cats, matched, stage, lang, reasons = detector.analyze(
         req.message, user_id=req.user_id, target_id=req.target_id
     )
@@ -131,6 +118,7 @@ def analyze(req: AnalyzeRequest):
 
 @router.get("/sessions")
 def sessions():
+    _cleanup_sessions()
     store.cleanup()
     snaps = store.snapshot()
     out = {}
@@ -148,6 +136,7 @@ def sessions():
 
 @router.get("/session/{user_id}/{target_id}")
 def session(user_id: str, target_id: str):
+    _cleanup_sessions()
     snaps = store.snapshot()
     key = (user_id, target_id)
     if key not in snaps:
@@ -178,7 +167,6 @@ app.include_router(router)
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
     _cleanup_sessions()
-
     sessions = []
     for key, session in store.snapshot().items():
         user_id, target_id = key
@@ -197,7 +185,7 @@ def dashboard():
     incidents = _read_incidents(limit=100)
 
     session_rows = "".join(
-        f"<tr><td>{escape(item['user_id'])}</td><td>{escape(item['target_id'])}</td><td>{item['conversation_risk']}</td><td>{escape(item['risk_level'])}</td><td>{escape(item['stage'])}</td><td>{item['messages_count']}</td><td>{escape(str(item['updated_at']))}</td></tr>"
+        f"<tr><td>{escape(item['user_id'])}</td><td>{escape(item['target_id'])}</td><td>{item['conversation_risk']}</td><td>{escape(item['risk_level'])}</td><td>{escape(item['stage'])}</td><td>{item['messages_count'])}</td><td>{escape(str(item['updated_at']))}</td></tr>"
         for item in sessions
     ) or "<tr><td colspan='7'>No active sessions.</td></tr>"
 
@@ -213,6 +201,10 @@ def dashboard():
         """
         for item in incidents
     ) or "<div class='card'>No incidents logged yet.</div>"
+
+    total_sessions = len(sessions)
+    critical_sessions = sum(1 for x in sessions if x["risk_level"] == "CRITICAL")
+    incident_count = len(incidents)
 
     html = f"""
     <!doctype html>
@@ -233,26 +225,35 @@ def dashboard():
         .grid {{ display:grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }}
         .meta {{ color:#93c5fd; margin-bottom:8px; font-size:12px; }}
         .muted {{ color:#9ca3af; }}
-        @media (max-width: 900px) {{ .hero, .grid {{ grid-template-columns: 1fr; }} }}
+        @media (max-width: 900px) {{
+          .hero, .grid {{ grid-template-columns: 1fr; }}
+        }}
       </style>
     </head>
     <body>
       <div class="wrap">
         <h1>PlaySentinel Dashboard</h1>
         <p class="muted">Live overview of active sessions and recent incidents.</p>
+
         <div class="hero">
-          <div class="stat"><div class="muted">Active sessions</div><h2>{len(sessions)}</h2></div>
-          <div class="stat"><div class="muted">Critical sessions</div><h2>{sum(1 for x in sessions if x['risk_level'] == 'CRITICAL')}</h2></div>
-          <div class="stat"><div class="muted">Recent incidents</div><h2>{len(incidents)}</h2></div>
+          <div class="stat"><div class="muted">Active sessions</div><h2>{total_sessions}</h2></div>
+          <div class="stat"><div class="muted">Critical sessions</div><h2>{critical_sessions}</h2></div>
+          <div class="stat"><div class="muted">Recent incidents</div><h2>{incident_count}</h2></div>
         </div>
+
         <div class="grid">
           <div class="panel">
             <h3>Active sessions</h3>
             <table>
-              <thead><tr><th>User</th><th>Target</th><th>Risk</th><th>Level</th><th>Stage</th><th>Msgs</th><th>Updated</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>User</th><th>Target</th><th>Risk</th><th>Level</th><th>Stage</th><th>Msgs</th><th>Updated</th>
+                </tr>
+              </thead>
               <tbody>{session_rows}</tbody>
             </table>
           </div>
+
           <div class="panel">
             <h3>Recent incidents</h3>
             {incident_cards}
