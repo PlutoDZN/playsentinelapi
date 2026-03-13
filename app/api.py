@@ -10,6 +10,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+import threading
+from playsentinel-discord-bot import bot
 
 from .config import Settings
 from .schemas import AnalyzeRequest, AnalyzeResponse, HealthResponse
