@@ -193,10 +193,27 @@ def delete_session(user_id: str, target_id: str):
 @router.post("/reset_session")
 def reset_session(req: ResetSessionRequest):
     _cleanup_sessions()
-    deleted = store.delete(req.user_id, req.target_id)
+
+    try:
+        deleted = store.delete(req.user_id, req.target_id)
+    except Exception as exc:
+        print(f"[RESET WARN] delete failed: {exc}")
+        deleted = False
+
     if not deleted:
-        return {"status": "no_session", "user_id": req.user_id, "target_id": req.target_id, "platform": req.platform}
-    return {"status": "reset", "user_id": req.user_id, "target_id": req.target_id, "platform": req.platform}
+        return {
+            "status": "no_session",
+            "user_id": req.user_id,
+            "target_id": req.target_id,
+            "platform": req.platform,
+        }
+
+    return {
+        "status": "reset",
+        "user_id": req.user_id,
+        "target_id": req.target_id,
+        "platform": req.platform,
+    }
 
 
 @router.get("/incidents")
