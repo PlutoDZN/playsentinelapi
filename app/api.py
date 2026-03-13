@@ -190,6 +190,7 @@ def delete_session(user_id: str, target_id: str):
     return {"status": "reset", "user_id": user_id, "target_id": target_id}
 
 
+
 @router.post("/reset_session")
 def reset_session(req: ResetSessionRequest):
     _cleanup_sessions()
@@ -197,7 +198,7 @@ def reset_session(req: ResetSessionRequest):
     try:
         deleted = store.delete(req.user_id, req.target_id)
     except Exception as exc:
-        print(f"[RESET WARN] delete failed: {exc}")
+        print(f"[RESET WARN] delete failed for {req.user_id}->{req.target_id}: {exc}")
         deleted = False
 
     if not deleted:
@@ -207,6 +208,14 @@ def reset_session(req: ResetSessionRequest):
             "target_id": req.target_id,
             "platform": req.platform,
         }
+
+    return {
+        "status": "reset",
+        "user_id": req.user_id,
+        "target_id": req.target_id,
+        "platform": req.platform,
+    }
+
 
     return {
         "status": "reset",
