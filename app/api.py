@@ -1,6 +1,9 @@
 from collections import deque
 from datetime import datetime
+from html import escape
 from typing import Dict
+import json
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,7 +76,7 @@ def _rate_limit(request: Request, api_key: str = Depends(_check_api_key)):
 
 def _cleanup_sessions() -> None:
     try:
-        store.cleanup()
+        _cleanup_sessions()
     except Exception as exc:
         print(f"[SESSION CLEANUP WARN] {exc}")
 
@@ -119,7 +122,7 @@ def analyze(req: AnalyzeRequest):
 @router.get("/sessions")
 def sessions():
     _cleanup_sessions()
-    store.cleanup()
+    _cleanup_sessions()
     snaps = store.snapshot()
     out = {}
     for (u, t), s in snaps.items():
@@ -185,7 +188,7 @@ def dashboard():
     incidents = _read_incidents(limit=100)
 
     session_rows = "".join(
-        f"<tr><td>{escape(item['user_id'])}</td><td>{escape(item['target_id'])}</td><td>{item['conversation_risk']}</td><td>{escape(item['risk_level'])}</td><td>{escape(item['stage'])}</td><td>{item['messages_count']}</td><td>{escape(str(item['updated_at']))}</td></tr>"
+        f"<tr><td>{escape(item['user_id'])}</td><td>{escape(item['target_id'])}</td><td>{item['conversation_risk']}</td><td>{escape(item['risk_level'])}</td><td>{escape(item['stage'])}</td><td>{item['messages_count'])}</td><td>{escape(str(item['updated_at']))}</td></tr>"
         for item in sessions
     ) or "<tr><td colspan='7'>No active sessions.</td></tr>"
 
