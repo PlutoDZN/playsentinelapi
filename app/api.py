@@ -188,7 +188,7 @@ def dashboard():
     incidents = _read_incidents(limit=100)
 
     session_rows = "".join(
-        f"<tr><td>{escape(item['user_id'])}</td><td>{escape(item['target_id'])}</td><td>{item['conversation_risk']}</td><td>{escape(item['risk_level'])}</td><td>{escape(item['stage'])}</td><td>{item['messages_count'])}</td><td>{escape(str(item['updated_at']))}</td></tr>"
+        f"<tr><td>{escape(item['user_id'])}</td><td>{escape(item['target_id'])}</td><td>{item['conversation_risk']}</td><td>{escape(item['risk_level'])}</td><td>{escape(item['stage'])}</td><td>{item['messages_count']}</td><td>{escape(str(item['updated_at']))}</td></tr>"
         for item in sessions
     ) or "<tr><td colspan='7'>No active sessions.</td></tr>"
 
