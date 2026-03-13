@@ -4,6 +4,7 @@ from typing import Dict
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from .config import Settings
 from .schemas import AnalyzeRequest, AnalyzeResponse, HealthResponse
